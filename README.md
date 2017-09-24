@@ -45,3 +45,4 @@ original caffe training https://github.com/CMU-Perceptual-Computing-Lab/caffe_rt
 [Pytorch](https://github.com/tensorboy/pytorch_Realtime_Multi-Person_Pose_Estimation)
 
 [keras](https://github.com/raymon-tian/keras_Realtime_Multi-Person_Pose_Estimation)
+# vgg_cpm
