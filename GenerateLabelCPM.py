@@ -82,9 +82,15 @@ def TransformJointsSelf(meta):
     newjo = {'joints': list(), 'isVisible': list()}
     COCO_to_ours_1 = [1, 6, 7, 9, 11, 6, 8, 10, 13, 15, 17, 12, 14, 16, 3, 2, 5, 4]
     COCO_to_ours_2 = [1, 7, 7, 9, 11, 6, 8, 10, 13, 15, 17, 12, 14, 16, 3, 2, 5, 4]
+    
+    # COCO_to_ours_1 = [14, 5, 6, 8, 10, 5, 7, 9, 12, 13, 13, 11, 13, 13, 2, 1, 4, 3]
+    # COCO_to_ours_2 = [14, 6, 6, 8, 10, 5, 7, 9, 12, 13, 13, 11, 13, 13, 2, 1, 4, 3]
 
-   
-    for i in range(18):
+    # COCO_to_ours_1 = [14, 6, 8, 10, 5, 7, 9, 12, 13, 11, 2, 1, 4, 3]
+    # COCO_to_ours_2 = [14, 6, 8, 10, 5, 7, 9, 12, 13, 11, 2, 1, 4, 3]
+
+
+    for i in range(14):
         currentdict = {'x': (jo['joints'][COCO_to_ours_1[i] - 1]['x'] + jo['joints'][COCO_to_ours_2[i] - 1]['x']) * 0.5,
                        'y': (jo['joints'][COCO_to_ours_1[i] - 1]['y'] + jo['joints'][COCO_to_ours_2[i] - 1]['y']) * 0.5}
         newjo['joints'].append(currentdict)
@@ -108,9 +114,17 @@ def TransformJointsOther(meta):
         newjo = {'joints': list(), 'isVisible': list()}
         COCO_to_ours_1 = [1, 6, 7, 9, 11, 6, 8, 10, 13, 15, 17, 12, 14, 16, 3, 2, 5, 4]
         COCO_to_ours_2 = [1, 7, 7, 9, 11, 6, 8, 10, 13, 15, 17, 12, 14, 16, 3, 2, 5, 4]
+	
+	# COCO_to_ours_1 = [14, 5, 6, 8, 10, 5, 7, 9, 12, 13, 13, 11, 13, 13, 2, 1, 4, 3]
+   	# COCO_to_ours_2 = [14, 6, 6, 8, 10, 5, 7, 9, 12, 13, 13, 11, 13, 13, 2, 1, 4, 3]
+	
+
+	# COCO_to_ours_1 = [14, 6, 8, 10, 5, 7, 9, 12, 13, 11, 2, 1, 4, 3]
+    	# COCO_to_ours_2 = [14, 6, 8, 10, 5, 7, 9, 12, 13, 11, 2, 1, 4, 3]
+
 
         
-        for i in range(18):
+        for i in range(14):
             currentdict = {
                 'x': (jo['joints'][COCO_to_ours_1[i] - 1]['x'] + jo['joints'][COCO_to_ours_2[i] - 1]['x']) * 0.5,
                 'y': (jo['joints'][COCO_to_ours_1[i] - 1]['y'] + jo['joints'][COCO_to_ours_2[i] - 1]['y']) * 0.5}

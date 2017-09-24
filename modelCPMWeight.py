@@ -6,6 +6,9 @@ from google.protobuf import text_format
 import mxnet as mx
 from generateLabelCPMWeight import *
 
+numofparts = 15
+numoflinks = 13
+
 def CPMModel():
    
     data = mx.symbol.Variable(name='data')
@@ -61,8 +64,8 @@ def CPMModel():
     relu5_4_CPM_L1 = mx.symbol.Activation(name='relu5_4_CPM_L1', data=conv5_4_CPM_L1 , act_type='relu')
     conv5_4_CPM_L2 = mx.symbol.Convolution(name='conv5_4_CPM_L2', data=relu5_3_CPM_L2 , num_filter=512, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
     relu5_4_CPM_L2 = mx.symbol.Activation(name='relu5_4_CPM_L2', data=conv5_4_CPM_L2 , act_type='relu')
-    conv5_5_CPM_L1 = mx.symbol.Convolution(name='conv5_5_CPM_L1', data=relu5_4_CPM_L1 , num_filter=38, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
-    conv5_5_CPM_L2 = mx.symbol.Convolution(name='conv5_5_CPM_L2', data=relu5_4_CPM_L2 , num_filter=19, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
+    conv5_5_CPM_L1 = mx.symbol.Convolution(name='conv5_5_CPM_L1', data=relu5_4_CPM_L1 , num_filter=numoflinks*2, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
+    conv5_5_CPM_L2 = mx.symbol.Convolution(name='conv5_5_CPM_L2', data=relu5_4_CPM_L2 , num_filter=numofparts, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
     concat_stage2 = mx.symbol.Concat(name='concat_stage2', *[conv5_5_CPM_L1,conv5_5_CPM_L2,relu4_4_CPM] )
     Mconv1_stage2_L1 = mx.symbol.Convolution(name='Mconv1_stage2_L1', data=concat_stage2 , num_filter=128, pad=(3,3), kernel=(7,7), stride=(1,1), no_bias=False)
     Mrelu1_stage2_L1 = mx.symbol.Activation(name='Mrelu1_stage2_L1', data=Mconv1_stage2_L1 , act_type='relu')
@@ -88,8 +91,8 @@ def CPMModel():
     Mrelu6_stage2_L1 = mx.symbol.Activation(name='Mrelu6_stage2_L1', data=Mconv6_stage2_L1 , act_type='relu')
     Mconv6_stage2_L2 = mx.symbol.Convolution(name='Mconv6_stage2_L2', data=Mrelu5_stage2_L2 , num_filter=128, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
     Mrelu6_stage2_L2 = mx.symbol.Activation(name='Mrelu6_stage2_L2', data=Mconv6_stage2_L2 , act_type='relu')
-    Mconv7_stage2_L1 = mx.symbol.Convolution(name='Mconv7_stage2_L1', data=Mrelu6_stage2_L1 , num_filter=38, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
-    Mconv7_stage2_L2 = mx.symbol.Convolution(name='Mconv7_stage2_L2', data=Mrelu6_stage2_L2 , num_filter=19, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
+    Mconv7_stage2_L1 = mx.symbol.Convolution(name='Mconv7_stage2_L1', data=Mrelu6_stage2_L1 , num_filter=numoflinks*2, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
+    Mconv7_stage2_L2 = mx.symbol.Convolution(name='Mconv7_stage2_L2', data=Mrelu6_stage2_L2 , num_filter=numofparts, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
     concat_stage3 = mx.symbol.Concat(name='concat_stage3', *[Mconv7_stage2_L1,Mconv7_stage2_L2,relu4_4_CPM] )
     Mconv1_stage3_L1 = mx.symbol.Convolution(name='Mconv1_stage3_L1', data=concat_stage3 , num_filter=128, pad=(3,3), kernel=(7,7), stride=(1,1), no_bias=False)
     Mrelu1_stage3_L1 = mx.symbol.Activation(name='Mrelu1_stage3_L1', data=Mconv1_stage3_L1 , act_type='relu')
@@ -115,8 +118,8 @@ def CPMModel():
     Mrelu6_stage3_L1 = mx.symbol.Activation(name='Mrelu6_stage3_L1', data=Mconv6_stage3_L1 , act_type='relu')
     Mconv6_stage3_L2 = mx.symbol.Convolution(name='Mconv6_stage3_L2', data=Mrelu5_stage3_L2 , num_filter=128, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
     Mrelu6_stage3_L2 = mx.symbol.Activation(name='Mrelu6_stage3_L2', data=Mconv6_stage3_L2 , act_type='relu')
-    Mconv7_stage3_L1 = mx.symbol.Convolution(name='Mconv7_stage3_L1', data=Mrelu6_stage3_L1 , num_filter=38, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
-    Mconv7_stage3_L2 = mx.symbol.Convolution(name='Mconv7_stage3_L2', data=Mrelu6_stage3_L2 , num_filter=19, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
+    Mconv7_stage3_L1 = mx.symbol.Convolution(name='Mconv7_stage3_L1', data=Mrelu6_stage3_L1 , num_filter=numoflinks*2, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
+    Mconv7_stage3_L2 = mx.symbol.Convolution(name='Mconv7_stage3_L2', data=Mrelu6_stage3_L2 , num_filter=numofparts, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
     concat_stage4 = mx.symbol.Concat(name='concat_stage4', *[Mconv7_stage3_L1,Mconv7_stage3_L2,relu4_4_CPM] )
     Mconv1_stage4_L1 = mx.symbol.Convolution(name='Mconv1_stage4_L1', data=concat_stage4 , num_filter=128, pad=(3,3), kernel=(7,7), stride=(1,1), no_bias=False)
     Mrelu1_stage4_L1 = mx.symbol.Activation(name='Mrelu1_stage4_L1', data=Mconv1_stage4_L1 , act_type='relu')
@@ -142,8 +145,8 @@ def CPMModel():
     Mrelu6_stage4_L1 = mx.symbol.Activation(name='Mrelu6_stage4_L1', data=Mconv6_stage4_L1 , act_type='relu')
     Mconv6_stage4_L2 = mx.symbol.Convolution(name='Mconv6_stage4_L2', data=Mrelu5_stage4_L2 , num_filter=128, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
     Mrelu6_stage4_L2 = mx.symbol.Activation(name='Mrelu6_stage4_L2', data=Mconv6_stage4_L2 , act_type='relu')
-    Mconv7_stage4_L1 = mx.symbol.Convolution(name='Mconv7_stage4_L1', data=Mrelu6_stage4_L1 , num_filter=38, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
-    Mconv7_stage4_L2 = mx.symbol.Convolution(name='Mconv7_stage4_L2', data=Mrelu6_stage4_L2 , num_filter=19, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
+    Mconv7_stage4_L1 = mx.symbol.Convolution(name='Mconv7_stage4_L1', data=Mrelu6_stage4_L1 , num_filter=numoflinks*2, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
+    Mconv7_stage4_L2 = mx.symbol.Convolution(name='Mconv7_stage4_L2', data=Mrelu6_stage4_L2 , num_filter=numofparts, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
     concat_stage5 = mx.symbol.Concat(name='concat_stage5', *[Mconv7_stage4_L1,Mconv7_stage4_L2,relu4_4_CPM] )
     Mconv1_stage5_L1 = mx.symbol.Convolution(name='Mconv1_stage5_L1', data=concat_stage5 , num_filter=128, pad=(3,3), kernel=(7,7), stride=(1,1), no_bias=False)
     Mrelu1_stage5_L1 = mx.symbol.Activation(name='Mrelu1_stage5_L1', data=Mconv1_stage5_L1 , act_type='relu')
@@ -169,8 +172,8 @@ def CPMModel():
     Mrelu6_stage5_L1 = mx.symbol.Activation(name='Mrelu6_stage5_L1', data=Mconv6_stage5_L1 , act_type='relu')
     Mconv6_stage5_L2 = mx.symbol.Convolution(name='Mconv6_stage5_L2', data=Mrelu5_stage5_L2 , num_filter=128, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
     Mrelu6_stage5_L2 = mx.symbol.Activation(name='Mrelu6_stage5_L2', data=Mconv6_stage5_L2 , act_type='relu')
-    Mconv7_stage5_L1 = mx.symbol.Convolution(name='Mconv7_stage5_L1', data=Mrelu6_stage5_L1 , num_filter=38, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
-    Mconv7_stage5_L2 = mx.symbol.Convolution(name='Mconv7_stage5_L2', data=Mrelu6_stage5_L2 , num_filter=19, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
+    Mconv7_stage5_L1 = mx.symbol.Convolution(name='Mconv7_stage5_L1', data=Mrelu6_stage5_L1 , num_filter=numoflinks*2, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
+    Mconv7_stage5_L2 = mx.symbol.Convolution(name='Mconv7_stage5_L2', data=Mrelu6_stage5_L2 , num_filter=numofparts, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
     concat_stage6 = mx.symbol.Concat(name='concat_stage6', *[Mconv7_stage5_L1,Mconv7_stage5_L2,relu4_4_CPM] )
     Mconv1_stage6_L1 = mx.symbol.Convolution(name='Mconv1_stage6_L1', data=concat_stage6 , num_filter=128, pad=(3,3), kernel=(7,7), stride=(1,1), no_bias=False)
     Mrelu1_stage6_L1 = mx.symbol.Activation(name='Mrelu1_stage6_L1', data=Mconv1_stage6_L1 , act_type='relu')
@@ -196,8 +199,8 @@ def CPMModel():
     Mrelu6_stage6_L1 = mx.symbol.Activation(name='Mrelu6_stage6_L1', data=Mconv6_stage6_L1 , act_type='relu')
     Mconv6_stage6_L2 = mx.symbol.Convolution(name='Mconv6_stage6_L2', data=Mrelu5_stage6_L2 , num_filter=128, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
     Mrelu6_stage6_L2 = mx.symbol.Activation(name='Mrelu6_stage6_L2', data=Mconv6_stage6_L2 , act_type='relu')
-    Mconv7_stage6_L1 = mx.symbol.Convolution(name='Mconv7_stage6_L1', data=Mrelu6_stage6_L1 , num_filter=38, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
-    Mconv7_stage6_L2 = mx.symbol.Convolution(name='Mconv7_stage6_L2', data=Mrelu6_stage6_L2 , num_filter=19, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
+    Mconv7_stage6_L1 = mx.symbol.Convolution(name='Mconv7_stage6_L1', data=Mrelu6_stage6_L1 , num_filter=numoflinks*2, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
+    Mconv7_stage6_L2 = mx.symbol.Convolution(name='Mconv7_stage6_L2', data=Mrelu6_stage6_L2 , num_filter=numofparts, pad=(0,0), kernel=(1,1), stride=(1,1), no_bias=False)
 
     conv5_5_CPM_L1r = mx.symbol.Reshape(data=conv5_5_CPM_L1, shape=(-1,), name='conv5_5_CPM_L1r')
     partaffinityglabelr = mx.symbol.Reshape(data=partaffinityglabel, shape=(-1, ), name='partaffinityglabelr')
@@ -289,33 +292,11 @@ def CPMModel():
                              stage2_loss_L1, stage2_loss_L2,
                              stage3_loss_L1, stage3_loss_L2,
                              stage4_loss_L1, stage4_loss_L2,
-                            stage5_loss_L1, stage5_loss_L2,
-                            stage6_loss_L1, stage6_loss_L2])
+                             stage5_loss_L1, stage5_loss_L2,
+                             stage6_loss_L1, stage6_loss_L2])
     return group
 
-def intializeModel(sym):
 
-    output_prefix = '../realtimePose'
-    temsym, arg_params, aux_params = mx.model.load_checkpoint(output_prefix, 0)
-
-    cmodel = mx.mod.Module(symbol=sym,
-                          label_names=['heatmaplabel',
-                                      'partaffinityglabel'])
-
-    cmodel.bind(data_shapes=[('data', (1, 3, 368, 368))], label_shapes=[
-        ('heatmaplabel',(1, 19, 46, 46)),
-        ('partaffinityglabel',(1,38,46,46))])
-   
-
-    cmodel.init_params(arg_params=arg_params, aux_params=aux_params)
-    
-    return cmodel
-
-    ''' 
-    # init optimizer
-    cmodel.init_optimizer(optimizer='sgd',
-                          optimizer_params=(('learning_rate', 0.1), )
-    '''
 
 class DataBatchweight(object):
     def __init__(self, data, heatmaplabel, partaffinityglabel, heatweight, vecweight, pad=0):
@@ -323,146 +304,3 @@ class DataBatchweight(object):
         self.label = [heatmaplabel, partaffinityglabel, heatweight, vecweight]
         self.pad = pad
 
-
-class cocoIterweight:
-    def __init__(self, datajson,
-                 data_names, data_shapes, label_names,
-                 label_shapes):
-
-        self._data_shapes = data_shapes
-        self._label_shapes = label_shapes
-        self._provide_data = zip([data_names], [data_shapes])
-        self._provide_label = zip(label_names, label_shapes) * 6
-
-        with open(datajson, 'r') as f:
-            data = json.load(f)
-
-        self.num_batches = len(data)
-
-        self.data = data
-        
-        self.cur_batch = 0
-
-        self.keys = data.keys()
-
-    def __iter__(self):
-        return self
-
-    def reset(self):
-        self.cur_batch = 0
-
-    def __next__(self):
-        return self.next()
-
-    @property
-    def provide_data(self):
-        return self._provide_data
-
-    @property
-    def provide_label(self):
-        return self._provide_label
-
-    def next(self):
-        if self.cur_batch < self.num_batches:
-
-
-            image, mask, heatmap, pagmap = getImageandLabel(self.data[self.keys[self.cur_batch]])
-            maskscale = mask[0:8:368, 0:8:368, 0]
-            
-            heatweight = np.ones((19,46,46))
-            vecweight = np.ones((38,46,46))
-            
-            for i in range(19):
-                heatweight[i,:,:] = maskscale
-               
-            for i in range(38):
-                vecweight[i,:,:] = maskscale
-            
-            transposeImage = np.transpose(np.float32(image), (2,0,1))/256 - 0.5
-            
-            self.cur_batch += 1
-
-            return DataBatchweight(
-                mx.nd.array([transposeImage]),
-                mx.nd.array([heatmap]),
-                mx.nd.array([pagmap]),
-                mx.nd.array([heatweight]),
-                mx.nd.array([vecweight]))
-        else:
-            raise StopIteration
-           
-class cocoIterFake:
-    def __init__(self, datajson,
-                 data_names, data_shapes, label_names,
-                 label_shapes):
-
-        self._data_shapes = data_shapes
-        self._label_shapes = label_shapes
-        self._provide_data = zip([data_names], [data_shapes])
-        self._provide_label = zip(label_names, label_shapes) * 6
-
-        with open(datajson, 'r') as f:
-            data = json.load(f)
-
-        self.num_batches = len(data)
-
-        self.data = data
-        
-        self.cur_batch = 0
-
-        self.keys = data.keys()
-
-    def __iter__(self):
-        return self
-
-    def reset(self):
-        self.cur_batch = 0
-
-    def __next__(self):
-        return self.next()
-
-    @property
-    def provide_data(self):
-        return self._provide_data
-
-    @property
-    def provide_label(self):
-        return self._provide_label
-
-    def next(self):
-        if self.cur_batch < self.num_batches:
-
-            ''' 
-            img = coco.loadImgs(self._imgIds[self._trainImageRanges[self.cur_batch]])[0]
-            # print(img)
-            imagepath = self._trainimagepath + img['file_name']
-            # print(imagepath)
-            oriImg = cv.imread(imagepath)  # B,G,R order
-
-            # print(oriImg.shape)
-            imageToTest = cv.resize(oriImg, (368, 368))
-
-            transposeImage = np.transpose(np.float32(imageToTest), (2, 0, 1)) / 256 - 0.5
-            testimage = transposeImage
-            '''
-
-            image, heatmap, pagmap = getImageandLabel(self.data[self.keys[self.cur_batch]])
-            
-            transposeImage = np.transpose(np.float32(image), (2,0,1))/256 - 0.5
-            
-            ''' 
-            heatavg = np.zeros((46,46))
-            for i in range(len(heatmap)):
-                heatavg = heatavg + heatmap[i]/len(heatmap)
-                
-            heatmap.append(heatavg)
-            '''
-            
-            self.cur_batch += 1
-
-            return DataBatch(
-                mx.nd.array([transposeImage]),
-                mx.nd.array([np.zeros((19, 46, 46))]),
-                mx.nd.array([np.zeros((38, 46, 46))]))
-        else:
-            raise StopIteration

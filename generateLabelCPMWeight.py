@@ -6,17 +6,26 @@ import mxnet as mx
 import numpy as np
 import copy
 import re
+from google.protobuf import text_format
 import json
 import cv2 as cv
+
 import scipy
 import PIL.Image
 import math
 import time
-from google.protobuf import text_format
 from PIL import Image, ImageDraw
+
+#import caffe
+#from caffe.proto import caffe_pb2
+from config.config import config
 from collections import namedtuple
 
+from cython.heatmap import putGaussianMaps
+from cython.pafmap import putVecMaps
+
 Point = namedtuple('Point', 'x y')
+
 crop_size_x = 368
 crop_size_y = 368
 center_perterb_max = 40
@@ -25,6 +34,9 @@ scale_min = 0.5
 scale_max = 1.1
 target_dist = 0.6
 
+numofparts = 14
+numoflinks = 13
+    
 def rotatePoint(R, pointDict):
     NewPoint = {'x':0, 'y':0}
     NewPoint['x'] = R[0,0]*pointDict['x']+R[0,1]*pointDict['y']+R[0,2]
@@ -44,12 +56,12 @@ def readmeta(data):
         # meta['joint_self']['isVisible'].append(joint_self[i][2])
         if joint_self[i][2] == 3:
             meta['joint_self']['isVisible'].append(3)
+        elif joint_self[i][2] == 2:
+            meta['joint_self']['isVisible'].append(2)
+        elif joint_self[i][2] == 0:
+            meta['joint_self']['isVisible'].append(0)
         else:
-            if joint_self[i][2] == 0:
-                meta['joint_self']['isVisible'].append(0)
-            else:
-                meta['joint_self']['isVisible'].append(1)
-
+            meta['joint_self']['isVisible'].append(1)
             if (meta['joint_self']['joints'][i]['x'] < 0 or meta['joint_self']['joints'][i]['y'] < 0
                 or meta['joint_self']['joints'][i]['x'] >= meta['img_size']['width'] or
                         meta['joint_self']['joints'][i]['y'] >= meta['img_size']['height']):
@@ -67,12 +79,12 @@ def readmeta(data):
             # meta['joint_self']['isVisible'].append(joint_self[i][2])
             if joint_other[i][2] == 3:
                 meta['joint_others'][key]['isVisible'].append(3)
+            elif joint_other[i][2] == 2:
+                meta['joint_others'][key]['isVisible'].append(2)
+            elif joint_other[i][2] == 0:
+                meta['joint_others'][key]['isVisible'].append(0)
             else:
-                if joint_other[i][2] == 0:
-                    meta['joint_others'][key]['isVisible'].append(0)
-                else:
-                    meta['joint_others'][key]['isVisible'].append(1)
-
+                meta['joint_others'][key]['isVisible'].append(1)
                 if (meta['joint_others'][key]['joints'][i]['x'] < 0 or meta['joint_others'][key]['joints'][i]['y'] < 0
                     or meta['joint_others'][key]['joints'][i]['x'] >= meta['img_size']['width'] or
                             meta['joint_others'][key]['joints'][i]['y'] >= meta['img_size']['height']):
@@ -84,10 +96,13 @@ def readmeta(data):
 def TransformJointsSelf(meta):
     jo = meta['joint_self'].copy()
     newjo = {'joints': list(), 'isVisible': list()}
-    COCO_to_ours_1 = [1, 6, 7, 9, 11, 6, 8, 10, 13, 15, 17, 12, 14, 16, 3, 2, 5, 4]
-    COCO_to_ours_2 = [1, 7, 7, 9, 11, 6, 8, 10, 13, 15, 17, 12, 14, 16, 3, 2, 5, 4]
+    #COCO_to_ours_1 = [1, 6, 7, 9, 11, 6, 8, 10, 13, 15, 17, 12, 14, 16, 3, 2, 5, 4]
+    #COCO_to_ours_2 = [1, 7, 7, 9, 11, 6, 8, 10, 13, 15, 17, 12, 14, 16, 3, 2, 5, 4]
 
-    for i in range(18):
+    COCO_to_ours_1 = list(range(1,15)) # [14, 6, 8, 10, 5, 7, 9, 12, 13, 11, 2, 1, 4, 3]
+    COCO_to_ours_2 = list(range(1,15)) # [14, 6, 8, 10, 5, 7, 9, 12, 13, 11, 2, 1, 4, 3]
+
+    for i in range(numofparts):
         currentdict = {'x': (jo['joints'][COCO_to_ours_1[i] - 1]['x'] + jo['joints'][COCO_to_ours_2[i] - 1]['x']) * 0.5,
                        'y': (jo['joints'][COCO_to_ours_1[i] - 1]['y'] + jo['joints'][COCO_to_ours_2[i] - 1]['y']) * 0.5}
         newjo['joints'].append(currentdict)
@@ -108,10 +123,13 @@ def TransformJointsOther(meta):
         jo = meta['joint_others'][key].copy()
 
         newjo = {'joints': list(), 'isVisible': list()}
-        COCO_to_ours_1 = [1, 6, 7, 9, 11, 6, 8, 10, 13, 15, 17, 12, 14, 16, 3, 2, 5, 4]
-        COCO_to_ours_2 = [1, 7, 7, 9, 11, 6, 8, 10, 13, 15, 17, 12, 14, 16, 3, 2, 5, 4]
+        #COCO_to_ours_1 = [1, 6, 7, 9, 11, 6, 8, 10, 13, 15, 17, 12, 14, 16, 3, 2, 5, 4]
+        #COCO_to_ours_2 = [1, 7, 7, 9, 11, 6, 8, 10, 13, 15, 17, 12, 14, 16, 3, 2, 5, 4]
+        
+        COCO_to_ours_1 = list(range(1, 15)) #[14, 6, 8, 10, 5, 7, 9, 12, 13, 11, 2, 1, 4, 3]
+        COCO_to_ours_2 = list(range(1, 15)) # [14, 6, 8, 10, 5, 7, 9, 12, 13, 11, 2, 1, 4, 3]
 
-        for i in range(18):
+        for i in range(numofparts):
             currentdict = {
                 'x': (jo['joints'][COCO_to_ours_1[i] - 1]['x'] + jo['joints'][COCO_to_ours_2[i] - 1]['x']) * 0.5,
                 'y': (jo['joints'][COCO_to_ours_1[i] - 1]['y'] + jo['joints'][COCO_to_ours_2[i] - 1]['y']) * 0.5}
@@ -134,6 +152,7 @@ def TransformMetaJoints(meta):
 
 def augmentation_scale(meta, oriImg, maskmiss):
     newmeta = copy.deepcopy(meta)
+    '''
     dice2 = np.random.uniform()
     scale_multiplier = (scale_max - scale_min) * dice2 + scale_min
     if newmeta['scale_provided']>0:
@@ -141,7 +160,10 @@ def augmentation_scale(meta, oriImg, maskmiss):
         scale = scale_abs * scale_multiplier
     else:
         scale = 1
-
+    '''
+    if config.TRAIN.scale_set == False:
+        scale = 1
+        
     resizeImage = cv.resize(oriImg, (0, 0), fx=scale, fy=scale)
     maskmiss_scale = cv.resize(maskmiss, (0,0), fx=scale, fy=scale)
     
@@ -170,11 +192,11 @@ def onPlane(p, img_size):
 def augmentation_flip(meta, croppedImage, maskmiss):
     dice = np.random.uniform()
     newmeta = copy.deepcopy(meta)
-    if dice > 0.5: 
+    if config.TRAIN.flip and dice > 0.5: 
         flipImage = cv.flip(croppedImage, 1)
         maskmiss_flip = cv.flip(maskmiss, 1)
 
-        newmeta['objpos'][0] =  newmeta['img_width'] - 1- newmeta['objpos'][0]
+        newmeta['objpos'][0] =  newmeta['img_width'] - 1 - newmeta['objpos'][0]
 
         for i in range(len(meta['joint_self']['joints'])):
             newmeta['joint_self']['joints'][i]['x'] = newmeta['img_width'] - 1- newmeta['joint_self']['joints'][i]['x']
@@ -190,10 +212,8 @@ def augmentation_flip(meta, croppedImage, maskmiss):
 
 def augmentation_rotate(meta, flipimage, maskmiss):
     newmeta = copy.deepcopy(meta)
-    #print maskmiss.dtype
-    max_rotate_degree = 40
     dice2 = np.random.uniform()
-    degree = (dice2 - 0.5)*2*max_rotate_degree
+    degree = (dice2 - 0.5)*2*config.TRAIN.max_rotate_degree 
     
     #print degree
     center = (368/2, 368/2)
@@ -213,15 +233,15 @@ def augmentation_rotate(meta, flipimage, maskmiss):
     return (newmeta, rotatedImage, maskmiss_rotated)
 
 def augmentation_croppad(meta, oriImg, maskmiss):
-    dice_x = np.random.uniform()
-    dice_y = np.random.uniform()
+    dice_x = 0.5
+    dice_y = 0.5
     # float dice_x = static_cast <float> (rand()) / static_cast <float> (RAND_MAX); //[0,1]
     # float dice_y = static_cast <float> (rand()) / static_cast <float> (RAND_MAX); //[0,1]
-    crop_x = crop_size_x
-    crop_y = crop_size_y
+    crop_x = config.TRAIN.crop_size_x
+    crop_y = config.TRAIN.crop_size_y
 
-    x_offset = int((dice_x - 0.5) * 2 * center_perterb_max)
-    y_offset = int((dice_y - 0.5) * 2 * center_perterb_max)
+    x_offset = int((dice_x - 0.5) * 2 * config.TRAIN.center_perterb_max)
+    y_offset = int((dice_y - 0.5) * 2 * config.TRAIN.center_perterb_max)
 
     #print x_offset, y_offset
     newmeta2 = copy.deepcopy(meta)
@@ -256,69 +276,6 @@ def augmentation_croppad(meta, oriImg, maskmiss):
 
     return (newmeta2, img_dst, maskmiss_croppad)
 
-
-def putGaussianMaps(entry, rows, cols, center,
-                    stride, grid_x, grid_y, sigma):
-    start = stride / 2.0 - 0.5
-    center = Point(int(center.x), int(center.y))
-
-    for g_y in range(grid_y):
-        for g_x in range(grid_x):
-            x = start + g_x * stride
-            y = start + g_y * stride
-            d2 = (x - center.x) * (x - center.x) + (y - center.y) * (y - center.y)
-            exponent = d2 / 2.0 / sigma / sigma
-            if (exponent > 4.6052):
-                continue
-            entry[g_y, g_x] += np.exp(-exponent)
-            if (entry[g_y, g_x] > 1):
-                entry[g_y, g_x] = 1
-    return entry
-
-
-def putVecMaps(entryX, entryY, count, center1, center2, stride, grid_x, grid_y, sigma, thre):
-    if (type(center1) != Point):
-        raise Exception
-    if (type(center2) != Point):
-        raise Exception
-    centerA = Point(0.125 * center1.x, 0.125 * center1.y)
-    centerB = Point(0.125 * center2.x, 0.125 * center2.y)
-    # print centerA, centerB
-    bc = Point(centerB.x - centerA.x, centerB.y - centerA.y)
-    # print grid_x, grid_y
-    min_x = max(int(round(min(centerA.x, centerB.x)) - thre), 0)
-    max_x = min(int(round(max(centerA.x, centerB.x))) + thre, grid_x)
-    min_y = max(int(round(min(centerA.y, centerB.y) - thre)), 0)
-    max_y = min(int(round(max(centerA.y, centerB.y) + thre)), grid_y)
-
-    # print('-------------')
-    # print(min_x, max_x)
-    # print(min_y, max_y)
-    norm_bc = np.sqrt(bc.x * bc.x + bc.y * bc.y)
-    if norm_bc == 0:
-        return 
-    #print '----norm_bc------'
-    #print norm_bc
-    
-    bc = Point(bc.x / norm_bc, bc.y / norm_bc)
-
-    for g_y in range(min_y, max_y):
-        for g_x in range(min_x, max_x):
-            ba = Point(g_x - centerA.x, g_y - centerA.y)
-            dist = abs(ba.x * bc.y - ba.y * bc.x)
-            # print dist
-            if (dist <= thre):
-                cnt = count[g_y, g_x]
-                if (cnt == 0):
-                    entryX[g_y, g_x] = bc.x
-                    entryY[g_y, g_x] = bc.y
-
-                else:
-                    entryX[g_y, g_x] = (entryX[g_y, g_x] * cnt + bc.x) / (cnt + 1)
-                    entryY[g_y, g_x] = (entryY[g_y, g_x] * cnt + bc.y) / (cnt + 1)
-                    count[g_y, g_x] = cnt + 1
-
-
 def generateLabelMap(img_aug, meta):
     thre = 1
     crop_size_width = 368
@@ -332,59 +289,62 @@ def generateLabelMap(img_aug, meta):
     sigma = 7.0
 
     heat_map = list()
-    for i in range(19):
+    for i in range(numofparts+1):
         heat_map.append(np.zeros((crop_size_width / stride, crop_size_height / stride)))
 
-    for i in range(18):
-        center = Point(meta['joint_self']['joints'][i]['x'], meta['joint_self']['joints'][i]['y'])
-
+    for i in range(numofparts):
         if (meta['joint_self']['isVisible'][i] <= 1):
-            putGaussianMaps(heat_map[i], 368, 368, center, stride,
-                            grid_x, grid_y, sigma)
+            putGaussianMaps(heat_map[i], 368, 368, 
+                            meta['joint_self']['joints'][i]['x'], meta['joint_self']['joints'][i]['y'],
+                            stride, grid_x, grid_y, sigma)
 
         for j in meta['joint_others']:
-            center = Point(meta['joint_others'][j]['joints'][i]['x'],
-                           meta['joint_others'][j]['joints'][i]['y'])
             if (meta['joint_others'][j]['isVisible'][i] <= 1):
-                putGaussianMaps(heat_map[i], 368, 368, center, stride,
-                                grid_x, grid_y, sigma)
-
+                putGaussianMaps(heat_map[i], 368, 368, 
+                                meta['joint_others'][j]['joints'][i]['x'], 
+                                meta['joint_others'][j]['joints'][i]['y'],
+                                stride, grid_x, grid_y, sigma)
+       
     ### put background channel
     
     for g_y in range(grid_y):
         for g_x in range(grid_x):
             maximum=0
-            for i in range(18):
+            for i in range(numofparts):
                 if maximum<heat_map[i][g_y, g_x]:
                     maximum = heat_map[i][g_y, g_x]
-            heat_map[18][g_y,g_x]=max(1.0-maximum,0.0)
+            heat_map[numofparts][g_y,g_x]=max(1.0-maximum,0.0)
                           
-    mid_1 = [2, 9, 10, 2, 12, 13, 2, 3, 4, 3, 2, 6, 7, 6, 2, 1, 1, 15, 16]
-    mid_2 = [9, 10, 11, 12, 13, 14, 3, 4, 5, 17, 6, 7, 8, 18, 1, 15, 16, 17, 18]
+    # mid_1 = [2, 9, 10, 2, 12, 13, 2, 3, 4, 3, 2, 6, 7, 6, 2, 1, 1, 15, 16]
+    # mid_2 = [9, 10, 11, 12, 13, 14, 3, 4, 5, 17, 6, 7, 8, 18, 1, 15, 16, 17, 18]
+    
+    mid_1 = [13,  1,  4, 1, 2, 4, 5, 1, 7, 8,  4, 10, 11]
+    mid_2 = [14, 14, 14, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12]
     thre = 1
 
     pag_map = list()
-    for i in range(38):
+    for i in range(numoflinks*2):
         pag_map.append(np.zeros((46, 46)))
 
-    for i in range(19):
+    for i in range(numoflinks):
         count = np.zeros((46, 46))
         jo = meta['joint_self']
 
         if (jo['isVisible'][mid_1[i] - 1] <= 1 and jo['isVisible'][mid_2[i] - 1] <= 1):
-            center1 = Point(jo['joints'][mid_1[i] - 1]['x'], jo['joints'][mid_1[i] - 1]['y'])
-            center2 = Point(jo['joints'][mid_2[i] - 1]['x'], jo['joints'][mid_2[i] - 1]['y'])
-            putVecMaps(pag_map[2 * i], pag_map[2 * i + 1], count, center1,
-                       center2, stride, 46, 46, sigma, thre)
+            putVecMaps(pag_map[2 * i], pag_map[2 * i + 1], count,
+                       jo['joints'][mid_1[i] - 1]['x'], jo['joints'][mid_1[i] - 1]['y'], 
+                       jo['joints'][mid_2[i] - 1]['x'], jo['joints'][mid_2[i] - 1]['y'],
+                       stride, 46, 46, sigma, thre)
+
 
         for j in meta['joint_others']:
             jo = meta['joint_others'][j]
             if (jo['isVisible'][mid_1[i] - 1] <= 1 and jo['isVisible'][mid_2[i] - 1] <= 1):
-                center1 = Point(jo['joints'][mid_1[i] - 1]['x'], jo['joints'][mid_1[i] - 1]['y'])
-                center2 = Point(jo['joints'][mid_2[i] - 1]['x'], jo['joints'][mid_2[i] - 1]['y'])
-                putVecMaps(pag_map[2 * i], pag_map[2 * i + 1], count, center1,
-                           center2, stride, 46, 46, sigma, thre)
-
+                putVecMaps(pag_map[2 * i], pag_map[2 * i + 1], count,
+                           jo['joints'][mid_1[i] - 1]['x'], jo['joints'][mid_1[i] - 1]['y'],
+                           jo['joints'][mid_2[i] - 1]['x'], jo['joints'][mid_2[i] - 1]['y'],
+                           stride, 46, 46, sigma, thre)
+                
     return (heat_map, pag_map)
 
 def getMask(meta):

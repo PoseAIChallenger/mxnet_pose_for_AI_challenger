@@ -1,26 +1,103 @@
 import sys
-sys.path.append('../../practice_demo')
+sys.path.append('/data/guest_users/liangdong/liangdong/practice_demo')
 from modelCPMWeight import *
 from config.config import config
 
-sym = CPMModel()
-testsym, arg_params, aux_params = mx.model.load_checkpoint(config.TRAIN.initial_model, 0)
+class AIChallengerIterweightBatch:
+    def __init__(self, datajson,
+                 data_names, data_shapes, label_names,
+                 label_shapes, batch_size = 1):
 
-class NewModule(mx.mod.Module):
+        self._data_shapes = data_shapes
+        self._label_shapes = label_shapes
+        self._provide_data = zip([data_names], [data_shapes])
+        self._provide_label = zip(label_names, label_shapes) * 6
+        self._batch_size = batch_size
 
-    def fit(self, train_data, num_epoch, arg_params=arg_params, aux_params=aux_params, begin_epoch=0):
-             
+        with open(datajson, 'r') as f:
+            data = json.load(f)
+
+        self.num_batches = len(data)
+
+        self.data = data
+        
+        self.cur_batch = 0
+
+        self.keys = data.keys()
+
+    def __iter__(self):
+        return self
+
+    def reset(self):
+        self.cur_batch = 0
+
+    def __next__(self):
+        return self.next()
+
+    @property
+    def provide_data(self):
+        return self._provide_data
+
+    @property
+    def provide_label(self):
+        return self._provide_label
+
+    def next(self):
+        if self.cur_batch < self.num_batches:
+            
+            transposeImage_batch = []
+            heatmap_batch = []
+            pagmap_batch = []
+            heatweight_batch = []
+            vecweight_batch = []
+            
+            for i in range(batch_size):
+                if self.cur_batch >= 45174:
+                    break
+                image, mask, heatmap, pagmap = getImageandLabel(self.data[self.keys[self.cur_batch]])
+                maskscale = mask[0:368:8, 0:368:8, 0]
+                heatweight = np.ones((numofparts, 46, 46))
+                vecweight = np.ones((numoflinks*2, 46, 46))
+
+                for i in range(numofparts):
+                    heatweight[i,:,:] = maskscale
+
+                for i in range(numoflinks*2):
+                    vecweight[i,:,:] = maskscale
+                
+                transposeImage = np.transpose(np.float32(image), (2,0,1))/256 - 0.5
+            
+                self.cur_batch += 1
+                
+                transposeImage_batch.append(transposeImage)
+                heatmap_batch.append(heatmap)
+                pagmap_batch.append(pagmap)
+                heatweight_batch.append(heatweight)
+                vecweight_batch.append(vecweight)
+                
+            return DataBatchweight(mx.nd.array(transposeImage_batch),
+                                   mx.nd.array(heatmap_batch),
+                                   mx.nd.array(pagmap_batch),
+                                   mx.nd.array(heatweight_batch),
+                                   mx.nd.array(vecweight_batch))
+        else:
+            raise StopIteration
+
+class poseModule(mx.mod.Module):
+
+    def fit(self, train_data, num_epoch, batch_size, carg_params=None, begin_epoch=0):
+        
         assert num_epoch is not None, 'please specify number of epochs'
 
-        self.bind(data_shapes=[('data', (1, 3, 368, 368))], label_shapes=[
-        ('heatmaplabel',(1, 19, 46, 46)),
-        ('partaffinityglabel',(1,38,46,46)),
-        ('heatweight',(1,19,46,46)),
-        ('vecweight',(1,38,46,46))])
+        self.bind(data_shapes=[('data', (batch_size, 3, 368, 368))], label_shapes=[
+        ('heatmaplabel', (batch_size, numofparts, 46, 46)),
+        ('partaffinityglabel', (batch_size, numoflinks*2, 46, 46)),
+        ('heatweight', (batch_size, numofparts, 46, 46)),
+        ('vecweight', (batch_size, numoflinks*2, 46, 46))])
    
-        self.init_params(arg_params=arg_params, aux_params=aux_params)
-
-        self.init_optimizer(optimizer='sgd', optimizer_params=(('learning_rate', 0.00000001), ))
+        self.init_params(arg_params = carg_params, aux_params={},
+                        allow_missing=True)
+        self.init_optimizer(optimizer='sgd', optimizer_params=(('learning_rate', 0.00004), ))
        
         for epoch in range(begin_epoch, num_epoch):
             tic = time.time()
@@ -32,57 +109,88 @@ class NewModule(mx.mod.Module):
             sumerror=0
             while not end_of_batch:
                 data_batch = next_data_batch
-                cmodel.forward(data_batch, is_train=True)       # compute predictions
-                
+                cmodel.forward(data_batch, is_train=True)       # compute predictions  
                 prediction=cmodel.get_outputs()
                 i=i+1
-               
                 sumloss=0
                 numpixel=0
+                print 'iteration: ', i
+                
+                '''
+                print 'length of prediction:', len(prediction)
                 for j in range(len(prediction)):
+                    
                     lossiter = prediction[j].asnumpy()
                     cls_loss = np.sum(lossiter)
+                    print 'loss: ', cls_loss
                     sumloss += cls_loss
                     numpixel +=lossiter.shape[0]
-
-                sumerror=sumerror+(math.sqrt(sumloss/numpixel))
-                print sumerror
+                    
+                '''
+                
+                lossiter = prediction[-1].asnumpy()              
+                cls_loss = np.sum(lossiter)/batch_size
+                print 'paf: ', cls_loss
+                sumerror = sumerror + cls_loss
+                lossiter = prediction[-2].asnumpy()
+                cls_loss = np.sum(lossiter)/batch_size
+                print 'heat: ', cls_loss
+                
+                sumerror = sumerror + cls_loss
+                
                 if i%100==0:
                     print i
                 
                 cmodel.backward()   
-                self.update()
-                
-                '''
-                if i > 40:
-                    break
-                '''
+                self.update()           
+                    
                 try:
                     next_data_batch = next(data_iter)
                     self.prepare(next_data_batch)
                 except StopIteration:
                     end_of_batch = True
-          
                 nbatch += 1
-             
+            
+                    
+            print '------Error-------'
+            print sumerror/i
             toc = time.time()
             self.logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc-tic))
 
             arg_params, aux_params = self.get_params()
             self.set_params(arg_params, aux_params)
             train_data.reset()
-            
-cocodata = cocoIterweight('pose_io/data.json',
-                          'data', (1, 3, 368, 368),
+
+sym = ''
+if config.TRAIN.head == 'vgg':
+    sym = CPMModel() 
+## Load parameters from vgg
+warmupModel = '/data/guest_users/liangdong/liangdong/practice_demo/mxnet_CPM/model/vgg19'
+testsym, arg_params, aux_params = mx.model.load_checkpoint(warmupModel, 0)
+newargs = {}
+for ikey in config.TRAIN.vggparams:
+    newargs[ikey] = arg_params[ikey]
+
+batch_size = 2
+aidata = AIChallengerIterweightBatch('pose_io/AI_data_val.json', # 'pose_io/COCO_data.json',
+                          'data', (batch_size, 3, 368, 368),
                           ['heatmaplabel','partaffinityglabel','heatweight','vecweight'],
-                          [(1, 19, 46, 46),(1,38,46,46),(1,19,46,46),(1,38,46,46)])
+                          [(batch_size, numofparts, 46, 46),
+                           (batch_size, numoflinks*2, 46, 46),
+                           (batch_size, numofparts, 46, 46),
+                           (batch_size, numoflinks*2, 46, 46)])
 
-cmodel = NewModule(symbol=sym, context=mx.gpu(3),
-                   label_names=['heatmaplabel',
-                                'partaffinityglabel',
-                                'heatweight',
-                                'vecweight'])
+cmodel = poseModule(symbol=sym, context=mx.gpu(3),
+                    label_names=['heatmaplabel',
+                                 'partaffinityglabel',
+                                 'heatweight',
+                                 'vecweight'])
+starttime = time.time()
 
-cmodel.fit(cocodata, num_epoch = config.TRAIN.num_epoch, arg_params=arg_params, aux_params=aux_params)
+iteration = 1
+cmodel.fit(aidata, num_epoch = iteration, batch_size = batch_size, carg_params = newargs)
+cmodel.save_checkpoint(config.TRAIN.output_model, iteration)
+endtime = time.time()
 
-cmodel.save_checkpoint(config.TRAIN.output_model, 0)
+print 'cost time: ', (endtime-starttime)/60
+
