@@ -22,6 +22,9 @@ python parse_label
 python TrainWeight.py
 ```
 
+You can download mxnet model and parameters for vgg19 from [here](http://data.mxnet.io/models/imagenet/vgg/)
+
+
 ### Cite paper Realtime Multi-Person 2D Pose Estimation using Part Affinity Fields
 
 ```
