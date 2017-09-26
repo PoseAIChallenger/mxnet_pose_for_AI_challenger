@@ -95,8 +95,13 @@ class poseModule(mx.mod.Module):
         ('heatweight', (batch_size, numofparts, 46, 46)),
         ('vecweight', (batch_size, numoflinks*2, 46, 46))])
    
-        self.init_params(arg_params = carg_params, aux_params={},
-                        allow_missing=True)
+        
+        # self.init_params(mx.initializer.Xavier(rnd_type='uniform', factor_type='avg', magnitude=1))
+        # mx.initializer.Uniform(scale=0.07),
+        # mx.initializer.Uniform(scale=0.01)
+        self.init_params(mx.initializer.Xavier(rnd_type='uniform', factor_type='avg', magnitude=0.01),arg_params = carg_params, aux_params={},allow_missing = True)
+        #self.set_params(arg_params = carg_params, aux_params={},
+        #                allow_missing = True)
         self.init_optimizer(optimizer='sgd', optimizer_params=(('learning_rate', 0.00004), ))
        
         for epoch in range(begin_epoch, num_epoch):
@@ -127,16 +132,25 @@ class poseModule(mx.mod.Module):
                     numpixel +=lossiter.shape[0]
                     
                 '''
+                lossiter = prediction[1].asnumpy()              
+                cls_loss = np.sum(lossiter)/batch_size
+                sumerror = sumerror + cls_loss
+                print 'start heat: ', cls_loss
+                    
+                lossiter = prediction[0].asnumpy()
+                cls_loss = np.sum(lossiter)/batch_size
+                sumerror = sumerror + cls_loss
+                print 'start paf: ', cls_loss
                 
                 lossiter = prediction[-1].asnumpy()              
                 cls_loss = np.sum(lossiter)/batch_size
-                print 'paf: ', cls_loss
                 sumerror = sumerror + cls_loss
+                print 'end heat: ', cls_loss
+                
                 lossiter = prediction[-2].asnumpy()
                 cls_loss = np.sum(lossiter)/batch_size
-                print 'heat: ', cls_loss
-                
                 sumerror = sumerror + cls_loss
+                print 'end paf: ', cls_loss   
                 
                 if i%100==0:
                     print i
@@ -164,6 +178,7 @@ class poseModule(mx.mod.Module):
 sym = ''
 if config.TRAIN.head == 'vgg':
     sym = CPMModel() 
+
 ## Load parameters from vgg
 warmupModel = '/data/guest_users/liangdong/liangdong/practice_demo/mxnet_CPM/model/vgg19'
 testsym, arg_params, aux_params = mx.model.load_checkpoint(warmupModel, 0)
@@ -171,7 +186,7 @@ newargs = {}
 for ikey in config.TRAIN.vggparams:
     newargs[ikey] = arg_params[ikey]
 
-batch_size = 2
+batch_size = 5
 aidata = AIChallengerIterweightBatch('pose_io/AI_data_val.json', # 'pose_io/COCO_data.json',
                           'data', (batch_size, 3, 368, 368),
                           ['heatmaplabel','partaffinityglabel','heatweight','vecweight'],
@@ -180,16 +195,21 @@ aidata = AIChallengerIterweightBatch('pose_io/AI_data_val.json', # 'pose_io/COCO
                            (batch_size, numofparts, 46, 46),
                            (batch_size, numoflinks*2, 46, 46)])
 
-cmodel = poseModule(symbol=sym, context=mx.gpu(3),
+cmodel = poseModule(symbol=sym, context=mx.gpu(0),
                     label_names=['heatmaplabel',
                                  'partaffinityglabel',
                                  'heatweight',
                                  'vecweight'])
 starttime = time.time()
 
-iteration = 1
+'''
+start_prefix = 1
+output_prefix = config.TRAIN.output_model
+testsym, newargs, aux_params = mx.model.load_checkpoint(output_prefix, start_prefix)
+'''
+iteration = 2
 cmodel.fit(aidata, num_epoch = iteration, batch_size = batch_size, carg_params = newargs)
-cmodel.save_checkpoint(config.TRAIN.output_model, iteration)
+cmodel.save_checkpoint(config.TRAIN.output_model, start_prefix + iteration)
 endtime = time.time()
 
 print 'cost time: ', (endtime-starttime)/60
