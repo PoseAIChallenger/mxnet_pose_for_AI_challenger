@@ -83,6 +83,7 @@ class AIChallengerIterweightBatch:
         else:
             raise StopIteration
 
+start_prefix = 0
 class poseModule(mx.mod.Module):
 
     def fit(self, train_data, num_epoch, batch_size, carg_params=None, begin_epoch=0):
@@ -103,7 +104,8 @@ class poseModule(mx.mod.Module):
         #self.set_params(arg_params = carg_params, aux_params={},
         #                allow_missing = True)
         self.init_optimizer(optimizer='sgd', optimizer_params=(('learning_rate', 0.00004), ))
-       
+        losserror_list = []
+
         for epoch in range(begin_epoch, num_epoch):
             tic = time.time()
             nbatch = 0
@@ -151,10 +153,8 @@ class poseModule(mx.mod.Module):
                 cls_loss = np.sum(lossiter)/batch_size
                 sumerror = sumerror + cls_loss
                 print 'end paf: ', cls_loss   
-                
-                if i%100==0:
-                    print i
-                
+               
+         
                 cmodel.backward()   
                 self.update()           
                     
@@ -168,13 +168,21 @@ class poseModule(mx.mod.Module):
                     
             print '------Error-------'
             print sumerror/i
+            losserror_list.append(sumerror/i)
+            
             toc = time.time()
             self.logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc-tic))
 
             arg_params, aux_params = self.get_params()
             self.set_params(arg_params, aux_params)
+            self.save_checkpoint(config.TRAIN.output_model, epoch)
+            
             train_data.reset()
-
+        print losserror_list
+        text_file = open("OutputLossError.txt", "w")
+        text_file.write(' '.join([str(i) for i in losserror_list]))
+        text_file.close()
+        
 sym = ''
 if config.TRAIN.head == 'vgg':
     sym = CPMModel() 
@@ -203,11 +211,10 @@ cmodel = poseModule(symbol=sym, context=mx.gpu(0),
 starttime = time.time()
 
 '''
-start_prefix = 1
 output_prefix = config.TRAIN.output_model
 testsym, newargs, aux_params = mx.model.load_checkpoint(output_prefix, start_prefix)
 '''
-iteration = 2
+iteration = 4
 cmodel.fit(aidata, num_epoch = iteration, batch_size = batch_size, carg_params = newargs)
 cmodel.save_checkpoint(config.TRAIN.output_model, start_prefix + iteration)
 endtime = time.time()
