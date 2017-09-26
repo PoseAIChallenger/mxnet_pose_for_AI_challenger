@@ -287,7 +287,9 @@ def generateLabelMap(img_aug, meta):
     grid_x = augmentcols / stride
     grid_y = augmentrows / stride
     sigma = 7.0
-
+    #sigma = 10.0
+    #sigma = 26.0
+    
     heat_map = list()
     for i in range(numofparts+1):
         heat_map.append(np.zeros((crop_size_width / stride, crop_size_height / stride)))
@@ -306,6 +308,7 @@ def generateLabelMap(img_aug, meta):
                                 stride, grid_x, grid_y, sigma)
        
     ### put background channel
+    #heat_map[numofparts] = heat_map[0]
     
     for g_y in range(grid_y):
         for g_x in range(grid_x):
@@ -314,7 +317,8 @@ def generateLabelMap(img_aug, meta):
                 if maximum<heat_map[i][g_y, g_x]:
                     maximum = heat_map[i][g_y, g_x]
             heat_map[numofparts][g_y,g_x]=max(1.0-maximum,0.0)
-                          
+   
+    
     # mid_1 = [2, 9, 10, 2, 12, 13, 2, 3, 4, 3, 2, 6, 7, 6, 2, 1, 1, 15, 16]
     # mid_2 = [9, 10, 11, 12, 13, 14, 3, 4, 5, 17, 6, 7, 8, 18, 1, 15, 16, 17, 18]
     
