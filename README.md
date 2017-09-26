@@ -5,15 +5,15 @@ keypoint competition](https://challenger.ai/competition/keypoint/subject)
 
 1. Generate intermediate files
 
-'''
+```
 python parse_label 
-'''
+```
 
 2. Train
 
-'''
+```
 python TrainWeight.py
-'''
+```
 
 ### Cite paper Realtime Multi-Person 2D Pose Estimation using Part Affinity Fields
 
