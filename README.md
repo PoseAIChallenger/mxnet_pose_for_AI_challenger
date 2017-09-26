@@ -3,13 +3,20 @@ keypoint competition](https://challenger.ai/competition/keypoint/subject)
 
 ## Train demo
 
-1. Generate intermediate files
+1. install cython package
+
+```
+./cython/rebuild.sh
+
+```
+
+2. Generate intermediate files
 
 ```
 python parse_label 
 ```
 
-2. Train
+3. Train
 
 ```
 python TrainWeight.py
