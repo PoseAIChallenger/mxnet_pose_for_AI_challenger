@@ -163,6 +163,10 @@ def augmentation_scale(meta, oriImg, maskmiss):
     '''
     if config.TRAIN.scale_set == False:
         scale = 1
+    else:
+        dice2 = np.random.uniform()
+        scale_multiplier = (config.TRAIN.scale_max - config.TRAIN.scale_min) * dice2 + config.TRAIN.scale_min
+        scale = 368.0/oriImg.shape[0]*scale_multiplier
         
     resizeImage = cv.resize(oriImg, (0, 0), fx=scale, fy=scale)
     maskmiss_scale = cv.resize(maskmiss, (0,0), fx=scale, fy=scale)
@@ -179,6 +183,9 @@ def augmentation_scale(meta, oriImg, maskmiss):
             newmeta['joint_others'][i]['joints'][j]['x'] *= scale
             newmeta['joint_others'][i]['joints'][j]['y'] *= scale
 
+    # newmeta4['img_width'], newmeta4['img_height']
+    newmeta['img_height'] = resizeImage.shape[0]
+    newmeta['img_width'] = resizeImage.shape[1]
     return (newmeta, resizeImage, maskmiss_scale)
 
 
@@ -192,6 +199,7 @@ def onPlane(p, img_size):
 def augmentation_flip(meta, croppedImage, maskmiss):
     dice = np.random.uniform()
     newmeta = copy.deepcopy(meta)
+    
     if config.TRAIN.flip and dice > 0.5: 
         flipImage = cv.flip(croppedImage, 1)
         maskmiss_flip = cv.flip(maskmiss, 1)
@@ -252,7 +260,7 @@ def augmentation_croppad(meta, oriImg, maskmiss):
     offset_up = -int(center[1] - crop_y / 2)
 
     img_dst = np.full((crop_y, crop_x, 3), 128, dtype=np.uint8)
-    maskmiss_croppad = np.full((crop_y, crop_x, 3), False, dtype=np.uint8)
+    maskmiss_cropped = np.full((crop_y, crop_x, 3), False, dtype=np.uint8)
     for i in range(crop_y):
         for j in range(crop_x):
             coord_x_on_img = int(center[0] - crop_x / 2 + j)
@@ -260,7 +268,7 @@ def augmentation_croppad(meta, oriImg, maskmiss):
             # print coord_x_on_img, coord_y_on_img
             if (onPlane([coord_x_on_img, coord_y_on_img], [oriImg.shape[1], oriImg.shape[0]])):
                 img_dst[i, j, :] = oriImg[coord_y_on_img, coord_x_on_img, :]
-                maskmiss_croppad[i, j] = maskmiss[coord_y_on_img, coord_x_on_img]
+                maskmiss_cropped[i, j] = maskmiss[coord_y_on_img, coord_x_on_img]
                 
     newmeta2['objpos'][0] += offset_left
     newmeta2['objpos'][1] += offset_up
@@ -274,10 +282,12 @@ def augmentation_croppad(meta, oriImg, maskmiss):
             newmeta2['joint_others'][i]['joints'][j]['x'] += offset_left
             newmeta2['joint_others'][i]['joints'][j]['y'] += offset_up
 
-    return (newmeta2, img_dst, maskmiss_croppad)
+    newmeta2['img_height'] = 368
+    newmeta2['img_width'] = 368
+    return (newmeta2, img_dst, maskmiss_cropped)
 
 def generateLabelMap(img_aug, meta):
-    thre = 1
+    thre = 0.5
     crop_size_width = 368
     crop_size_height = 368
 
@@ -286,7 +296,7 @@ def generateLabelMap(img_aug, meta):
     stride = 8
     grid_x = augmentcols / stride
     grid_y = augmentrows / stride
-    sigma = 7.0
+    sigma = 4.0
     #sigma = 10.0
     #sigma = 26.0
     

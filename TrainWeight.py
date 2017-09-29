@@ -100,7 +100,8 @@ class poseModule(mx.mod.Module):
         # self.init_params(mx.initializer.Xavier(rnd_type='uniform', factor_type='avg', magnitude=1))
         # mx.initializer.Uniform(scale=0.07),
         # mx.initializer.Uniform(scale=0.01)
-        self.init_params(mx.initializer.Xavier(rnd_type='uniform', factor_type='avg', magnitude=0.01),arg_params = carg_params, aux_params={},allow_missing = True)
+        # mx.initializer.Xavier(rnd_type='uniform', factor_type='avg', magnitude=0.01)
+        self.init_params(arg_params = carg_params, aux_params={}, allow_missing = True)
         #self.set_params(arg_params = carg_params, aux_params={},
         #                allow_missing = True)
         self.init_optimizer(optimizer='sgd', optimizer_params=(('learning_rate', 0.00004), ))
@@ -134,6 +135,9 @@ class poseModule(mx.mod.Module):
                     numpixel +=lossiter.shape[0]
                     
                 '''
+                
+         
+                
                 lossiter = prediction[1].asnumpy()              
                 cls_loss = np.sum(lossiter)/batch_size
                 sumerror = sumerror + cls_loss
@@ -157,6 +161,9 @@ class poseModule(mx.mod.Module):
          
                 cmodel.backward()   
                 self.update()           
+                
+                if i > 10:
+                    break
                     
                 try:
                     next_data_batch = next(data_iter)
@@ -175,7 +182,7 @@ class poseModule(mx.mod.Module):
 
             arg_params, aux_params = self.get_params()
             self.set_params(arg_params, aux_params)
-            self.save_checkpoint(config.TRAIN.output_model, epoch)
+            #self.save_checkpoint(config.TRAIN.output_model, epoch)
             
             train_data.reset()
         print losserror_list
@@ -194,7 +201,7 @@ newargs = {}
 for ikey in config.TRAIN.vggparams:
     newargs[ikey] = arg_params[ikey]
 
-batch_size = 5
+batch_size = 10
 aidata = AIChallengerIterweightBatch('pose_io/AI_data_val.json', # 'pose_io/COCO_data.json',
                           'data', (batch_size, 3, 368, 368),
                           ['heatmaplabel','partaffinityglabel','heatweight','vecweight'],
@@ -203,7 +210,7 @@ aidata = AIChallengerIterweightBatch('pose_io/AI_data_val.json', # 'pose_io/COCO
                            (batch_size, numofparts, 46, 46),
                            (batch_size, numoflinks*2, 46, 46)])
 
-cmodel = poseModule(symbol=sym, context=mx.gpu(0),
+cmodel = poseModule(symbol=sym, context=mx.cpu(),
                     label_names=['heatmaplabel',
                                  'partaffinityglabel',
                                  'heatweight',
@@ -214,7 +221,7 @@ starttime = time.time()
 output_prefix = config.TRAIN.output_model
 testsym, newargs, aux_params = mx.model.load_checkpoint(output_prefix, start_prefix)
 '''
-iteration = 4
+iteration = 3
 cmodel.fit(aidata, num_epoch = iteration, batch_size = batch_size, carg_params = newargs)
 cmodel.save_checkpoint(config.TRAIN.output_model, start_prefix + iteration)
 endtime = time.time()

@@ -36,17 +36,17 @@ config.TRAIN.center_perterb_max = 0
 
 config.TRAIN.scale_prob = 1
 
-config.TRAIN.scale_min = 0.5
-
-config.TRAIN.flip = False
+config.TRAIN.scale_min = 0.9
 
 config.TRAIN.scale_max = 1.1
 
+config.TRAIN.flip = True
+
 config.TRAIN.target_dist = 0.6
 
-config.TRAIN.max_rotate_degree = 0
+config.TRAIN.max_rotate_degree = 30
 
-config.TRAIN.scale_set = False
+config.TRAIN.scale_set = True
 
 config.TRAIN.head = 'vgg'
 
