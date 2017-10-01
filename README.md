@@ -12,8 +12,15 @@ keypoint competition](https://challenger.ai/competition/keypoint/subject)
 
 2. Generate intermediate files
 
+change folder name and json name in pose_io/parse_label.py
+
 ```
-python parse_label 
+path1 = '/data/guest_users/liangdong/liangdong/practice_demo/AIchallenger/keypoint_validation_annotations_20170911.json' 
+trainimagepath = '/data/guest_users/liangdong/liangdong/practice_demo/AIchallenger/validation_image/keypoint_validation_images_20170911/'
+```
+
+```
+python pose_io/parse_label.py 
 ```
 
 3. Train
