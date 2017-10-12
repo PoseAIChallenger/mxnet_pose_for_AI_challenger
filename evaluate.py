@@ -79,12 +79,12 @@ def applyDNN(oriImg, images, sym1, arg_params1, aux_params1):
     #print 'forward'
     result = cmodel.get_outputs()
     
-    heatmap = np.moveaxis(result[1].asnumpy()[0], 0, -1)
+    heatmap = np.moveaxis(result[11].asnumpy()[0], 0, -1)
     heatmap = cv.resize(heatmap, (0,0), fx=8, fy=8, interpolation=cv.INTER_CUBIC)
     heatmap = heatmap[:imageToTest_padded.shape[0]-pad[2], :imageToTest_padded.shape[1]-pad[3], :]
     heatmap = cv.resize(heatmap, (oriImg.shape[1], oriImg.shape[0]), interpolation=cv.INTER_CUBIC)
     
-    pagmap = np.moveaxis(result[0].asnumpy()[0], 0, -1)
+    pagmap = np.moveaxis(result[10].asnumpy()[0], 0, -1)
     pagmap = cv.resize(pagmap, (0,0), fx=8, fy=8, interpolation=cv.INTER_CUBIC)
     pagmap = pagmap[:imageToTest_padded.shape[0]-pad[2], :imageToTest_padded.shape[1]-pad[3], :]
     pagmap = cv.resize(pagmap, (oriImg.shape[1], oriImg.shape[0]), interpolation=cv.INTER_CUBIC)
