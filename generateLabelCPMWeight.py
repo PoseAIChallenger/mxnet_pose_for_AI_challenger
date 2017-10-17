@@ -6,7 +6,6 @@ import mxnet as mx
 import numpy as np
 import copy
 import re
-from google.protobuf import text_format
 import json
 import cv2 as cv
 
@@ -296,9 +295,9 @@ def generateLabelMap(img_aug, meta):
     stride = 8
     grid_x = augmentcols / stride
     grid_y = augmentrows / stride
-    sigma = 4.0
+    #sigma = 4.0
     #sigma = 10.0
-    #sigma = 26.0
+    sigma = 7
     
     heat_map = list()
     for i in range(numofparts+1):
