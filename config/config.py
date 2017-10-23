@@ -1,4 +1,3 @@
-import yaml
 import numpy as np
 from easydict import EasyDict as edict
 
@@ -46,7 +45,7 @@ config.TRAIN.target_dist = 0.6
 
 config.TRAIN.max_rotate_degree = 0
 
-config.TRAIN.scale_set = True
+config.TRAIN.scale_set = False
 
 config.TRAIN.head = 'vgg'
 
