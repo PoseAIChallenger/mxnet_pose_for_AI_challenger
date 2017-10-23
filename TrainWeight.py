@@ -17,7 +17,7 @@ class AIChallengerIterweightBatch:
         with open(datajson, 'r') as f:
             data = json.load(f)
 
-        self.num_batches = len(data)
+        self.num_batches = len(data)/20*20
 
         self.data = data
         
@@ -52,8 +52,10 @@ class AIChallengerIterweightBatch:
             vecweight_batch = []
             
             for i in range(batch_size):
+                '''
                 if self.cur_batch >= 45174:
                     break
+                '''
                 image, mask, heatmap, pagmap = getImageandLabel(self.data[self.keys[self.cur_batch]])
                 maskscale = mask[0:368:8, 0:368:8, 0]
                 heatweight = np.ones((numofparts, 46, 46))
@@ -83,7 +85,7 @@ class AIChallengerIterweightBatch:
         else:
             raise StopIteration
 
-start_prefix = 0
+start_prefix = 47
 class poseModule(mx.mod.Module):
 
     def fit(self, train_data, num_epoch, batch_size, carg_params=None, begin_epoch=0):
@@ -161,10 +163,10 @@ class poseModule(mx.mod.Module):
          
                 cmodel.backward()   
                 self.update()           
-                
+                '''
                 if i > 10:
                     break
-                    
+                '''    
                 try:
                     next_data_batch = next(data_iter)
                     self.prepare(next_data_batch)
@@ -182,7 +184,7 @@ class poseModule(mx.mod.Module):
 
             arg_params, aux_params = self.get_params()
             self.set_params(arg_params, aux_params)
-            #self.save_checkpoint(config.TRAIN.output_model, epoch)
+            self.save_checkpoint(config.TRAIN.output_model, start_prefix+epoch+1)
             
             train_data.reset()
         print losserror_list
@@ -210,18 +212,18 @@ aidata = AIChallengerIterweightBatch('pose_io/AI_data_val.json', # 'pose_io/COCO
                            (batch_size, numofparts, 46, 46),
                            (batch_size, numoflinks*2, 46, 46)])
 
-cmodel = poseModule(symbol=sym, context=mx.cpu(),
+cmodel = poseModule(symbol=sym, context=mx.gpu(0),
                     label_names=['heatmaplabel',
                                  'partaffinityglabel',
                                  'heatweight',
                                  'vecweight'])
 starttime = time.time()
 
-'''
+
 output_prefix = config.TRAIN.output_model
 testsym, newargs, aux_params = mx.model.load_checkpoint(output_prefix, start_prefix)
-'''
-iteration = 3
+
+iteration = 10
 cmodel.fit(aidata, num_epoch = iteration, batch_size = batch_size, carg_params = newargs)
 cmodel.save_checkpoint(config.TRAIN.output_model, start_prefix + iteration)
 endtime = time.time()
