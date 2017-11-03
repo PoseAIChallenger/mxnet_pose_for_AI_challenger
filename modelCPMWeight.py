@@ -227,7 +227,7 @@ def CPMModel():
     #heatmaplabelr = mx.symbol.Reshape(data=heatmaplabel, shape=(-1, ), name='heatmaplabelr')
     stage2_loss_L2s = mx.symbol.square(Mconv7_stage2_L2r-heatmaplabelr)
     #heatweightw = mx.symbol.Reshape(data=heatweight, shape=(-1,), name='conv5_5_CPM_L1r')
-    stage2_loss_L2w = stage1_loss_L2s*heatweightw
+    stage2_loss_L2w = stage2_loss_L2s*heatweightw
     stage2_loss_L2  = mx.symbol.MakeLoss(stage2_loss_L2w)
     
     
@@ -256,7 +256,7 @@ def CPMModel():
     #heatmaplabelr = mx.symbol.Reshape(data=heatmaplabel, shape=(-1, ), name='heatmaplabelr')
     stage4_loss_L2s = mx.symbol.square(Mconv7_stage4_L2r-heatmaplabelr)
     #heatweightw = mx.symbol.Reshape(data=heatweight, shape=(-1,), name='conv5_5_CPM_L1r')
-    stage4_loss_L2w = stage1_loss_L2s*heatweightw
+    stage4_loss_L2w = stage4_loss_L2s*heatweightw
     stage4_loss_L2  = mx.symbol.MakeLoss(stage4_loss_L2w)
     
     Mconv7_stage5_L1r = mx.symbol.Reshape(data=Mconv7_stage5_L1, shape=(-1,), name='Mconv7_stage5_L1')
